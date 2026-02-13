@@ -103,10 +103,12 @@ server.tool(
   {
     title: z.string().describe("Plan title"),
     description: z.string().optional().describe("Plan description"),
+    start_date: z.string().describe("Start date YYYY-MM-DD"),
+    due_date: z.string().describe("Due date YYYY-MM-DD"),
     branch: z.string().optional().default("argus").describe("Branch name"),
   },
-  async ({ title, description, branch }) => {
-    const data = await client.post("/api/gant/plans", { title, description, branch });
+  async ({ title, description, start_date, due_date, branch }) => {
+    const data = await client.post("/api/gant/plans", { title, description, start_date, due_date, branch });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );
