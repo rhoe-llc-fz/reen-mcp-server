@@ -257,6 +257,34 @@ server.tool(
   },
 );
 
+// --- Ex-Help tools ---
+
+server.tool(
+  "list_exhelp",
+  "List all Ex-Help requests for a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+  },
+  async ({ plan_id }) => {
+    const data = await client.get(`/api/gant/exhelp/${plan_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "create_exhelp",
+  "Create a new Ex-Help request for a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+    title: z.string().optional().default("").describe("Request title"),
+    problem: z.string().optional().default("").describe("Problem description (Markdown)"),
+  },
+  async ({ plan_id, title, problem }) => {
+    const data = await client.post(`/api/gant/exhelp/${plan_id}`, { title, problem });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
