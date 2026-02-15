@@ -82,6 +82,10 @@ export class ReenClient {
     return this.request<T>("POST", path, body);
   }
 
+  put<T = unknown>(path: string, body?: unknown) {
+    return this.request<T>("PUT", path, body);
+  }
+
   patch<T = unknown>(path: string, body?: unknown) {
     return this.request<T>("PATCH", path, body);
   }

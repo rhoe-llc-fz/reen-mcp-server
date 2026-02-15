@@ -257,6 +257,33 @@ server.tool(
   },
 );
 
+// --- Narrative tools ---
+
+server.tool(
+  "get_narrative",
+  "Get the narrative text content of a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+  },
+  async ({ plan_id }) => {
+    const data = await client.get(`/api/gant/plans/${plan_id}/narrative`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "update_narrative",
+  "Update the narrative text content of a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+    narrative: z.string().describe("Narrative text (Markdown)"),
+  },
+  async ({ plan_id, narrative }) => {
+    const data = await client.put(`/api/gant/plans/${plan_id}/narrative`, { narrative });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Ex-Help tools ---
 
 server.tool(
@@ -281,6 +308,73 @@ server.tool(
   },
   async ({ plan_id, title, problem }) => {
     const data = await client.post(`/api/gant/exhelp/${plan_id}`, { title, problem });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "update_exhelp",
+  "Update an Ex-Help request (title, problem, answer, status)",
+  {
+    exhelp_id: z.string().describe("Ex-Help request ID"),
+    title: z.string().optional().describe("New title"),
+    problem: z.string().optional().describe("Updated problem description (Markdown)"),
+    answer: z.string().optional().describe("Answer text (Markdown)"),
+    status: z.enum(["draft", "sent", "answered"]).optional().describe("New status"),
+  },
+  async ({ exhelp_id, ...fields }) => {
+    const body = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
+    const data = await client.patch(`/api/gant/exhelp/${exhelp_id}`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "get_exhelp_pack",
+  "Generate a context pack for an Ex-Help request (includes plan, tasks, files)",
+  {
+    exhelp_id: z.string().describe("Ex-Help request ID"),
+    format: z.enum(["json", "md"]).optional().default("json").describe("Output format: json or md"),
+  },
+  async ({ exhelp_id, format }) => {
+    const data = await client.get(`/api/gant/exhelp/${exhelp_id}/pack?format=${format}`);
+    return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
+  },
+);
+
+// --- Conference tools ---
+
+server.tool(
+  "list_conferences",
+  "List all conferences for the current user",
+  {},
+  async () => {
+    const data = await client.get<{ conferences: unknown[] }>("/api/conferences");
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "get_conference_initial_prompt",
+  "Get the initial system prompt of a conference",
+  {
+    conference_id: z.string().describe("Conference ID"),
+  },
+  async ({ conference_id }) => {
+    const data = await client.get(`/api/conferences/${conference_id}/initial-prompt`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "update_conference_initial_prompt",
+  "Update the initial system prompt of a conference",
+  {
+    conference_id: z.string().describe("Conference ID"),
+    initial_prompt: z.string().describe("New initial prompt text"),
+  },
+  async ({ conference_id, initial_prompt }) => {
+    const data = await client.put(`/api/conferences/${conference_id}/initial-prompt`, { initial_prompt });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );
