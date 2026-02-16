@@ -449,6 +449,19 @@ server.tool(
 );
 
 server.tool(
+  "update_conference_agents",
+  "Set active AI models for a conference (claude, codex, gemini, grok)",
+  {
+    conference_id: z.string().describe("Conference ID"),
+    agents: z.array(z.string()).describe("List of active model IDs (e.g. ['claude', 'codex', 'gemini', 'grok'])"),
+  },
+  async ({ conference_id, agents }) => {
+    const data = await client.put(`/api/conferences/${conference_id}/agents`, { agents });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
   "send_conference_message",
   "Send a message to a conference. Use mentions to @mention other AI models (claude, codex, gemini, grok) and trigger their response.",
   {
