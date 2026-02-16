@@ -320,11 +320,41 @@ server.tool(
     title: z.string().optional().describe("New title"),
     problem: z.string().optional().describe("Updated problem description (Markdown)"),
     answer: z.string().optional().describe("Answer text (Markdown)"),
+    answers: z.array(z.object({
+      model_id: z.string().describe("Model ID: claude, gpt, gemini, grok"),
+      text: z.string().describe("Answer text (Markdown)"),
+      created_at: z.string().optional().describe("ISO timestamp"),
+    })).optional().describe("Array of model-specific answers"),
     status: z.enum(["draft", "sent", "answered"]).optional().describe("New status"),
   },
   async ({ exhelp_id, ...fields }) => {
     const body = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
     const data = await client.patch(`/api/gant/exhelp/${exhelp_id}`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "add_exhelp_answer",
+  "Add or update an AI model's answer for an Ex-Help request",
+  {
+    exhelp_id: z.string().describe("Ex-Help request ID"),
+    model_id: z.enum(["claude", "gpt", "gemini", "grok"]).describe("Model ID"),
+    text: z.string().describe("Answer text (Markdown)"),
+  },
+  async ({ exhelp_id, model_id, text }) => {
+    // Получаем текущие answers
+    const current = await client.get<{ exhelp?: { answers?: unknown } }>(`/api/gant/exhelp/${exhelp_id}/pack?format=json`);
+    let answers: Array<{ model_id: string; text: string; created_at?: string }> = [];
+    const exhelp = (current as Record<string, unknown>)?.exhelp as Record<string, unknown> | undefined;
+    const raw = exhelp?.answers;
+    if (Array.isArray(raw)) answers = raw as typeof answers;
+    // Обновляем или добавляем ответ
+    const entry = { model_id, text, created_at: new Date().toISOString() };
+    const idx = answers.findIndex(a => a.model_id === model_id);
+    if (idx >= 0) answers[idx] = entry;
+    else answers.push(entry);
+    const data = await client.patch(`/api/gant/exhelp/${exhelp_id}`, { answers });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );
