@@ -342,6 +342,49 @@ server.tool(
   },
 );
 
+server.tool(
+  "delete_exhelp",
+  "Delete an Ex-Help request",
+  {
+    exhelp_id: z.string().describe("Ex-Help request ID to delete"),
+  },
+  async ({ exhelp_id }) => {
+    const data = await client.delete(`/api/gant/exhelp/${exhelp_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "share_exhelp",
+  "Generate a public share link for an Ex-Help request (7-day TTL, no auth required to view)",
+  {
+    exhelp_id: z.string().describe("Ex-Help request ID"),
+  },
+  async ({ exhelp_id }) => {
+    const data = await client.post(`/api/gant/exhelp/${exhelp_id}/share`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "list_plan_files",
+  "List files attached to a plan (filterable by context: narrative or exhelp)",
+  {
+    plan_id: z.string().describe("Plan ID"),
+    context: z.enum(["narrative", "exhelp"]).optional().describe("Filter by context type"),
+    exhelp_id: z.string().optional().describe("Filter by Ex-Help request ID (when context=exhelp)"),
+  },
+  async ({ plan_id, context, exhelp_id }) => {
+    let path = `/api/gant/plans/${plan_id}/files`;
+    const params: string[] = [];
+    if (context) params.push(`context=${context}`);
+    if (exhelp_id) params.push(`exhelp_id=${exhelp_id}`);
+    if (params.length) path += `?${params.join("&")}`;
+    const data = await client.get(path);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Conference tools ---
 
 server.tool(
