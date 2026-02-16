@@ -422,6 +422,47 @@ server.tool(
   },
 );
 
+server.tool(
+  "create_conference",
+  "Create a new AI conference for multi-model discussions",
+  {
+    title: z.string().describe("Conference title"),
+    description: z.string().optional().describe("Conference description"),
+  },
+  async ({ title, description }) => {
+    const data = await client.post("/api/conferences", { title, description });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "read_conference_messages",
+  "Read recent messages from a conference (history + metadata)",
+  {
+    conference_id: z.string().describe("Conference ID"),
+    limit: z.number().optional().default(50).describe("Number of recent messages to return (default 50)"),
+  },
+  async ({ conference_id, limit }) => {
+    const data = await client.get(`/api/conferences/${conference_id}?limit=${limit}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "send_conference_message",
+  "Send a message to a conference. Use mentions to @mention other AI models (claude, codex, gemini, grok) and trigger their response.",
+  {
+    conference_id: z.string().describe("Conference ID"),
+    content: z.string().describe("Message text (supports @mentions like @claude, @codex, @gemini, @all)"),
+    author: z.string().optional().default("claude-code").describe("Author name displayed in chat"),
+    mentions: z.array(z.string()).optional().default([]).describe("Explicit @mentions to route message (e.g. ['claude', 'codex'])"),
+  },
+  async ({ conference_id, content, author, mentions }) => {
+    const data = await client.post(`/api/conferences/${conference_id}/messages`, { content, author, mentions });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
