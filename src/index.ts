@@ -450,10 +450,10 @@ server.tool(
 
 server.tool(
   "update_conference_agents",
-  "Set active AI models for a conference (claude, codex, gemini, grok)",
+  "Set active AI models for a conference. Valid models: claude, codex, gemini, grok",
   {
     conference_id: z.string().describe("Conference ID"),
-    agents: z.array(z.string()).describe("List of active model IDs (e.g. ['claude', 'codex', 'gemini', 'grok'])"),
+    agents: z.array(z.enum(["claude", "codex", "gemini", "grok"])).max(4).describe("List of active model IDs"),
   },
   async ({ conference_id, agents }) => {
     const data = await client.put(`/api/conferences/${conference_id}/agents`, { agents });
