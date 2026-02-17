@@ -480,10 +480,10 @@ server.tool(
 
 server.tool(
   "update_conference_agents",
-  "Set active AI models for a conference. Valid models: claude, codex, gemini, grok",
+  "Set active AI models for a conference. Valid models: claude, gpt, gemini, grok",
   {
     conference_id: z.string().describe("Conference ID"),
-    agents: z.array(z.enum(["claude", "codex", "gemini", "grok"])).max(4).describe("List of active model IDs"),
+    agents: z.array(z.enum(["claude", "gpt", "gemini", "grok"])).max(4).describe("List of active model IDs"),
   },
   async ({ conference_id, agents }) => {
     const data = await client.put(`/api/conferences/${conference_id}/agents`, { agents });
@@ -493,12 +493,12 @@ server.tool(
 
 server.tool(
   "send_conference_message",
-  "Send a message to a conference. Use mentions to @mention other AI models (claude, codex, gemini, grok) and trigger their response.",
+  "Send a message to a conference. Use mentions to @mention other AI models (claude, gpt, gemini, grok) and trigger their response.",
   {
     conference_id: z.string().describe("Conference ID"),
-    content: z.string().describe("Message text (supports @mentions like @claude, @codex, @gemini, @all)"),
+    content: z.string().describe("Message text (supports @mentions like @claude, @gpt, @gemini, @all)"),
     author: z.string().optional().default("claude-code").describe("Author name displayed in chat"),
-    mentions: z.array(z.string()).optional().default([]).describe("Explicit @mentions to route message (e.g. ['claude', 'codex'])"),
+    mentions: z.array(z.string()).optional().default([]).describe("Explicit @mentions to route message (e.g. ['claude', 'gpt'])"),
   },
   async ({ conference_id, content, author, mentions }) => {
     const data = await client.post(`/api/conferences/${conference_id}/messages`, { content, author, mentions });
