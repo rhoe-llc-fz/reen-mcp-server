@@ -160,6 +160,7 @@ server.tool(
     start_date: z.string().describe("Start date YYYY-MM-DD"),
     end_date: z.string().describe("End date YYYY-MM-DD"),
     status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().default("planned"),
+    position: z.number().int().min(0).optional().describe("Position index (0-based). Omit to append at end"),
   },
   async (args) => {
     const data = await client.post("/api/gant/task", args);
@@ -181,6 +182,7 @@ server.tool(
     end_date: z.string().describe("End date YYYY-MM-DD"),
     status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().default("planned"),
     path: z.array(z.number()).optional().default([]).describe("Path to nested parent (e.g. [0, 2])"),
+    position: z.number().int().min(0).optional().describe("Position index (0-based). Omit to append at end"),
   },
   async (args) => {
     const data = await client.post("/api/gant/subtask", args);
@@ -239,6 +241,22 @@ server.tool(
   },
   async (args) => {
     const data = await client.delete("/api/gant/task", args);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+// =============================================
+// Tool: reorder_task
+// =============================================
+server.tool(
+  "reorder_task",
+  "Move a task to a new position within its sibling group",
+  {
+    task_id: z.string().describe("Task ID to move"),
+    position: z.number().int().min(0).describe("New position index (0-based)"),
+  },
+  async ({ task_id, position }) => {
+    const data = await client.post("/api/gant/tasks/reorder", { task_id, position });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );
