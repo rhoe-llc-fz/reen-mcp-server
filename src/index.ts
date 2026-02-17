@@ -529,6 +529,73 @@ server.tool(
   },
 );
 
+// =============================================
+// Tool: list_artifacts
+// =============================================
+server.tool(
+  "list_artifacts",
+  "List all artifacts for a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+  },
+  async ({ plan_id }) => {
+    const data = await client.get(`/api/gant/artifacts/${plan_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+// =============================================
+// Tool: create_artifact
+// =============================================
+server.tool(
+  "create_artifact",
+  "Create a new artifact (note/file) in a plan",
+  {
+    plan_id: z.string().describe("Plan ID"),
+    title: z.string().optional().default("New Artifact").describe("Artifact title"),
+    content: z.string().optional().default("").describe("Artifact content (Markdown)"),
+  },
+  async ({ plan_id, title, content }) => {
+    const data = await client.post(`/api/gant/artifacts/${plan_id}`, { title, content });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+// =============================================
+// Tool: update_artifact
+// =============================================
+server.tool(
+  "update_artifact",
+  "Update an artifact's title or content",
+  {
+    artifact_id: z.string().describe("Artifact ID"),
+    title: z.string().optional().describe("New title"),
+    content: z.string().optional().describe("New content (Markdown)"),
+  },
+  async ({ artifact_id, title, content }) => {
+    const body: Record<string, string> = {};
+    if (title !== undefined) body.title = title;
+    if (content !== undefined) body.content = content;
+    const data = await client.patch(`/api/gant/artifacts/${artifact_id}`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+// =============================================
+// Tool: delete_artifact
+// =============================================
+server.tool(
+  "delete_artifact",
+  "Delete an artifact (soft delete)",
+  {
+    artifact_id: z.string().describe("Artifact ID to delete"),
+  },
+  async ({ artifact_id }) => {
+    const data = await client.delete(`/api/gant/artifacts/${artifact_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
