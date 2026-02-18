@@ -1,6 +1,6 @@
 /**
- * HTTP client wrapper для REEN backend API.
- * Retry на 429/5xx, exponential backoff, redact токенов в логах.
+ * HTTP client wrapper for REEN backend API.
+ * Retry on 429/5xx, exponential backoff, token redaction in logs.
  */
 
 const DEFAULT_BASE_URL = "https://backend.reen.tech";
@@ -21,7 +21,7 @@ export class ReenClient {
     this.token = opts.token;
   }
 
-  /** Выполнить запрос к REEN API с retry */
+  /** Execute a request to the REEN API with retry */
   async request<T = unknown>(
     method: string,
     path: string,
@@ -50,7 +50,7 @@ export class ReenClient {
           body: body ? JSON.stringify(body) : undefined,
         });
 
-        // Retry на 429 и 5xx
+        // Retry on 429 and 5xx
         if (res.status === 429 || res.status >= 500) {
           lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
           if (attempt < MAX_RETRIES) continue;
@@ -73,7 +73,7 @@ export class ReenClient {
     throw lastError || new Error("Request failed");
   }
 
-  // Шорткаты
+  // Shortcuts
   get<T = unknown>(path: string) {
     return this.request<T>("GET", path);
   }
@@ -111,9 +111,9 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Логирование в stderr (stdout занят JSON-RPC) */
+/** Log to stderr (stdout is reserved for JSON-RPC) */
 export function log(msg: string): void {
-  // Redact токенов в логах
+  // Redact tokens in logs
   const safe = msg.replace(/reen_[a-f0-9]{64}/g, "reen_***REDACTED***");
   process.stderr.write(`[reen-mcp] ${safe}\n`);
 }

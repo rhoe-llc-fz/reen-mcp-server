@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * REEN MCP Server — нативные инструменты для AI-агентов.
- * Тонкая прослойка над REST API backend.reen.tech.
+ * REEN MCP Server — native tools for AI agents.
+ * Thin wrapper over REST API backend.reen.tech.
  *
- * Транспорт: stdio (стандарт для Claude Code, Cursor, Codex).
- * Авторизация: REEN_API_TOKEN env.
+ * Transport: stdio (standard for Claude Code, Cursor, Codex).
+ * Auth: REEN_API_TOKEN env.
  */
 export {};
 //# sourceMappingURL=index.d.ts.map

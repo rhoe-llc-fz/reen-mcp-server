@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * REEN MCP Server — нативные инструменты для AI-агентов.
- * Тонкая прослойка над REST API backend.reen.tech.
+ * REEN MCP Server — native tools for AI agents.
+ * Thin wrapper over REST API backend.reen.tech.
  *
- * Транспорт: stdio (стандарт для Claude Code, Cursor, Codex).
- * Авторизация: REEN_API_TOKEN env.
+ * Transport: stdio (standard for Claude Code, Cursor, Codex).
+ * Auth: REEN_API_TOKEN env.
  */
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -157,7 +157,7 @@ server.tool("update_task_dates", "Update a task's start and/or due dates", {
     start_date: z.string().optional().describe("New start date YYYY-MM-DD"),
     due_date: z.string().optional().describe("New due date YYYY-MM-DD"),
 }, async ({ plan_id, task_id, start_date, due_date }) => {
-    // Бэкенд ожидает end_date, а не due_date
+    // Backend expects end_date, not due_date
     const data = await client.patch("/api/gant/task/dates", { plan_id, task_id, start_date, end_date: due_date });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 });
@@ -245,14 +245,14 @@ server.tool("add_exhelp_answer", "Add or update an AI model's answer for an Ex-H
     model_id: z.enum(["claude", "gpt", "gemini", "grok"]).describe("Model ID"),
     text: z.string().describe("Answer text (Markdown)"),
 }, async ({ exhelp_id, model_id, text }) => {
-    // Получаем текущие answers
+    // Get current answers
     const current = await client.get(`/api/gant/exhelp/${exhelp_id}/pack?format=json`);
     let answers = [];
     const exhelp = current?.exhelp;
     const raw = exhelp?.answers;
     if (Array.isArray(raw))
         answers = raw;
-    // Обновляем или добавляем ответ
+    // Update or add answer
     const entry = { model_id, text, created_at: new Date().toISOString() };
     const idx = answers.findIndex(a => a.model_id === model_id);
     if (idx >= 0)
