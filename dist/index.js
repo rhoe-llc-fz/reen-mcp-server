@@ -60,13 +60,48 @@ server.tool("list_plans", "List all Gantt plans. Returns summary by default (id,
 // =============================================
 server.tool("get_plan", "Get a specific plan by ID with all tasks and subtasks", {
     plan_id: z.string().describe("Plan ID (e.g. 'argus-20260212-113911-6e2e82')"),
-}, async ({ plan_id }) => {
+    detail_level: z.enum(["summary", "full"]).optional().default("summary")
+        .describe("'summary' = narrative + compact task tree (no description/briefing). 'full' = everything (can be very large). Use 'summary' for initial overview, 'full' only when you need task details."),
+}, async ({ plan_id, detail_level }) => {
     const data = await client.get("/api/gant/plans");
     const plan = data.plans.find((p) => p.id === plan_id);
     if (!plan) {
         return { content: [{ type: "text", text: `Plan '${plan_id}' not found` }], isError: true };
     }
-    return { content: [{ type: "text", text: JSON.stringify(plan, null, 2) }] };
+    if (detail_level === "full") {
+        return { content: [{ type: "text", text: JSON.stringify(plan, null, 2) }] };
+    }
+    // --- summary mode: compact view with narrative ---
+    const narData = await client.get(`/api/gant/plans/${plan_id}/narrative`);
+    const allTasks = plan.tasks ?? [];
+    // Построить дерево: top-level задачи + подсчёт subtasks
+    const topLevel = allTasks.filter((t) => !t.parent_task_id);
+    const summaryTasks = topLevel.map((t) => {
+        const children = allTasks.filter((c) => c.parent_task_id === t.id);
+        return {
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            progress: t.progress,
+            start_date: t.start_date,
+            end_date: t.end_date,
+            subtask_count: children.length,
+            subtasks_done: children.filter((c) => c.status === "done").length,
+        };
+    });
+    const summary = {
+        id: plan.id,
+        title: plan.title,
+        status: plan.status,
+        progress: plan.progress,
+        start_date: plan.start_date,
+        due_date: plan.due_date,
+        description: plan.description,
+        narrative: narData.narrative || "",
+        total_tasks: allTasks.length,
+        tasks: summaryTasks,
+    };
+    return { content: [{ type: "text", text: JSON.stringify(summary, null, 2) }] };
 });
 // =============================================
 // Tool: create_plan
