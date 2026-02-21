@@ -636,6 +636,117 @@ server.tool(
   },
 );
 
+// --- Research tools ---
+
+server.tool(
+  "research_upload_book",
+  "Upload a book/document for analysis via JSON. Pipeline extracts text, segments into chapters, then stops at 'segments_ready' for your local AI to analyze.",
+  {
+    title: z.string().describe("Book title"),
+    text: z.string().describe("Full text content of the book/document"),
+    author: z.string().optional().describe("Author name"),
+    domain: z.string().optional().describe("Knowledge domain (e.g. 'physics', 'philosophy')"),
+    language: z.string().optional().describe("Language code (e.g. 'en', 'ru'). Auto-detected if omitted."),
+  },
+  async (args) => {
+    const data = await client.post("/api/research/books/json", args);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_list_books",
+  "List all books in the user's research library with their processing status.",
+  {},
+  async () => {
+    const data = await client.get("/api/research/books");
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_get_book",
+  "Get a book's knowledge graph (cards + edges). Only meaningful when status = 'completed'.",
+  {
+    book_id: z.string().describe("Book ID"),
+  },
+  async ({ book_id }) => {
+    const data = await client.get(`/api/research/books/${book_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_get_book_status",
+  "Check a book's processing status and progress.",
+  {
+    book_id: z.string().describe("Book ID"),
+  },
+  async ({ book_id }) => {
+    const data = await client.get(`/api/research/books/${book_id}/status`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_get_segments",
+  "Get raw text segments (chapters) of a book for analysis. Returns segments array + expected output schema. Only works when status = 'segments_ready'.",
+  {
+    book_id: z.string().describe("Book ID"),
+  },
+  async ({ book_id }) => {
+    const data = await client.get(`/api/research/books/${book_id}/segments`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_submit_analysis",
+  "Submit analysis results (cards + edges) produced by your local AI model. This completes the book processing and builds the knowledge graph. Can be called on 'segments_ready' or 'completed' books (re-submission replaces old data).",
+  {
+    book_id: z.string().describe("Book ID"),
+    cards: z.array(z.object({
+      chapter_number: z.number().int().describe("Chapter index (1-based, matching segment order)"),
+      title: z.string().describe("Chapter title"),
+      essence: z.string().describe("One-sentence core idea"),
+      summary_simple: z.string().describe("Simple summary (2-3 sentences)"),
+      summary_technical: z.string().describe("Technical summary with key details"),
+      importance: z.number().int().min(1).max(5).describe("Importance rating 1-5"),
+      key_terms: z.array(z.string()).optional().default([]).describe("Key terms/concepts"),
+      evidence_quotes: z.array(z.object({
+        text: z.string(),
+        location: z.string().optional(),
+      })).optional().default([]).describe("Supporting quotes from the text"),
+    })).describe("Analysis cards, one per chapter"),
+    edges: z.array(z.object({
+      from_chapter: z.number().int().describe("Source chapter number"),
+      to_chapter: z.number().int().describe("Target chapter number"),
+      type: z.enum(["depends_on", "extends", "illustrates"]).describe("Relationship type"),
+      confidence: z.number().min(0).max(1).optional().default(1.0).describe("Confidence 0.0-1.0"),
+      why: z.string().optional().describe("Explanation of the connection"),
+    })).optional().default([]).describe("Edges connecting chapters"),
+    book_summary: z.string().optional().describe("Overall book summary (2-3 sentences)"),
+  },
+  async ({ book_id, cards, edges, book_summary }) => {
+    const body: Record<string, unknown> = { cards, edges };
+    if (book_summary) body.book_summary = book_summary;
+    const data = await client.post(`/api/research/books/${book_id}/analyze`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "research_delete_book",
+  "Delete a book from the research library.",
+  {
+    book_id: z.string().describe("Book ID to delete"),
+  },
+  async ({ book_id }) => {
+    const data = await client.delete(`/api/research/books/${book_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
