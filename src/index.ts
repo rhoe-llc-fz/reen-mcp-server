@@ -690,7 +690,7 @@ server.tool(
 
 server.tool(
   "research_get_segments",
-  "Get raw text segments (chapters) of a book for analysis. Returns segments array + expected output schema. Only works when status = 'segments_ready'.",
+  "Get raw text segments (chapters) of a book for analysis. Returns segments array + expected output schema + page_images (base64 PNG renders of pages containing graphics/diagrams). Only works when status = 'segments_ready'.",
   {
     book_id: z.string().describe("Book ID"),
   },
