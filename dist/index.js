@@ -452,7 +452,7 @@ server.tool("research_get_book_status", "Check a book's processing status and pr
     const data = await client.get(`/api/research/books/${book_id}/status`);
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 });
-server.tool("research_get_segments", "Get raw text segments (chapters) of a book for analysis. Returns segments array + expected output schema. Only works when status = 'segments_ready'.", {
+server.tool("research_get_segments", "Get raw text segments (chapters) of a book for analysis. Returns segments array + expected output schema + page_images (base64 PNG renders of pages containing graphics/diagrams). Only works when status = 'segments_ready'.", {
     book_id: z.string().describe("Book ID"),
 }, async ({ book_id }) => {
     const data = await client.get(`/api/research/books/${book_id}/segments`);
@@ -463,15 +463,19 @@ server.tool("research_submit_analysis", "Submit analysis results (cards + edges)
     cards: z.array(z.object({
         chapter_number: z.number().int().describe("Chapter index (1-based, matching segment order)"),
         title: z.string().describe("Chapter title"),
-        essence: z.string().describe("One-sentence core idea"),
-        summary_simple: z.string().describe("Simple summary (2-3 sentences)"),
-        summary_technical: z.string().describe("Technical summary with key details"),
+        essence: z.string().describe("Core insight of this chapter in one sentence — not a summary, but what the reader understands after this chapter"),
+        thesis: z.string().optional().describe("The specific argumentative claim this chapter advances. What is the author ARGUING? 1-2 sentences."),
+        chapter_context: z.string().optional().describe("This chapter's role in the book's architecture: what it builds upon and what it enables. 2-3 sentences."),
+        summary_simple: z.string().describe("Reconstruction of the chapter's argument for a non-specialist. State the problem, explain the approach, present conclusions. 8-12 sentences."),
+        argument_structure: z.string().optional().describe("Logical skeleton: premises → reasoning steps → conclusion. Think proof outline. 3-6 sentences."),
+        summary_technical: z.string().describe("Analytical deep dive using author's terminology and notation. Preserve formal elements, explain distinctions, trace implications. 12-20 sentences."),
+        formal_elements: z.string().optional().describe("Formal models, mathematical notation, taxonomies — reproduced verbatim with explanation. null if none."),
         importance: z.number().int().min(1).max(5).describe("Importance rating 1-5"),
-        key_terms: z.array(z.string()).optional().default([]).describe("Key terms/concepts"),
+        key_terms: z.array(z.string()).optional().default([]).describe("Key terms/concepts including technical terms in author's notation"),
         evidence_quotes: z.array(z.object({
             text: z.string(),
             location: z.string().optional(),
-        })).optional().default([]).describe("Supporting quotes from the text"),
+        })).optional().default([]).describe("Verbatim quotes capturing key claims, not just definitions"),
     })).describe("Analysis cards, one per chapter"),
     edges: z.array(z.object({
         from_chapter: z.number().int().describe("Source chapter number"),
