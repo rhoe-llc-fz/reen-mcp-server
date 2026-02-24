@@ -521,9 +521,10 @@ server.tool(
   {
     title: z.string().describe("Conference title"),
     description: z.string().optional().describe("Conference description"),
+    book_id: z.string().optional().describe("Link to Research Library book (must be 'completed' status)"),
   },
-  async ({ title, description }) => {
-    const data = await client.post("/api/conferences", { title, description });
+  async ({ title, description, book_id }) => {
+    const data = await client.post("/api/conferences", { title, description, book_id });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );
