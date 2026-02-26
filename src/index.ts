@@ -752,6 +752,122 @@ server.tool(
   },
 );
 
+// --- Strategic Plans ---
+
+server.tool(
+  "list_strategic_plans",
+  "List all strategic plans for the current user",
+  {},
+  async () => {
+    const data = await client.get("/api/gant/strategic-plans");
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "create_strategic_plan",
+  "Create a new strategic plan (free-form canvas where cards = plans)",
+  {
+    title: z.string().describe("Strategic plan title"),
+    description: z.string().optional().describe("Strategic plan description"),
+  },
+  async ({ title, description }) => {
+    const body: Record<string, unknown> = { title };
+    if (description) body.description = description;
+    const data = await client.post("/api/gant/strategic-plans", body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "get_strategic_plan",
+  "Get a strategic plan with all cards and edges (full canvas)",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID"),
+  },
+  async ({ strategic_plan_id }) => {
+    const data = await client.get(`/api/gant/strategic-plans/${strategic_plan_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "update_strategic_plan",
+  "Update a strategic plan's title or description",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID"),
+    title: z.string().optional().describe("New title"),
+    description: z.string().optional().describe("New description"),
+  },
+  async ({ strategic_plan_id, ...fields }) => {
+    const body = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
+    const data = await client.patch(`/api/gant/strategic-plans/${strategic_plan_id}`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "delete_strategic_plan",
+  "Delete a strategic plan (soft delete)",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID to delete"),
+  },
+  async ({ strategic_plan_id }) => {
+    const data = await client.delete(`/api/gant/strategic-plans/${strategic_plan_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "add_strategic_plan_card",
+  "Add a plan card to the strategic plan canvas",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID"),
+    plan_id: z.string().describe("Plan ID to add as a card"),
+    position_x: z.number().optional().describe("X position on canvas (default: auto)"),
+    position_y: z.number().optional().describe("Y position on canvas (default: auto)"),
+  },
+  async ({ strategic_plan_id, plan_id, position_x, position_y }) => {
+    const body: Record<string, unknown> = { plan_id };
+    if (position_x !== undefined) body.position_x = position_x;
+    if (position_y !== undefined) body.position_y = position_y;
+    const data = await client.post(`/api/gant/strategic-plans/${strategic_plan_id}/cards`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "remove_strategic_plan_card",
+  "Remove a plan card from the strategic plan canvas",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID"),
+    card_id: z.string().describe("Card ID to remove"),
+  },
+  async ({ strategic_plan_id, card_id }) => {
+    const data = await client.delete(`/api/gant/strategic-plans/${strategic_plan_id}/cards/${card_id}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "add_strategic_plan_edge",
+  "Add an edge (arrow) between two cards on the strategic plan canvas",
+  {
+    strategic_plan_id: z.string().describe("Strategic plan ID"),
+    source_card_id: z.string().describe("Source card ID"),
+    target_card_id: z.string().describe("Target card ID"),
+    label: z.string().optional().describe("Optional text label on the edge"),
+    edge_type: z.enum(["default", "dependency", "feeds", "blocks"]).optional().default("default")
+      .describe("Edge type: default, dependency, feeds, blocks"),
+  },
+  async ({ strategic_plan_id, source_card_id, target_card_id, label, edge_type }) => {
+    const body: Record<string, unknown> = { source_card_id, target_card_id, edge_type };
+    if (label) body.label = label;
+    const data = await client.post(`/api/gant/strategic-plans/${strategic_plan_id}/edges`, body);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
