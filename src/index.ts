@@ -163,8 +163,10 @@ server.tool(
     plan_id: z.string().describe("Plan ID"),
     title: z.string().optional().describe("New title"),
     description: z.string().optional().describe("New description"),
-    status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().describe("New status"),
+    status: z.enum(["planned", "in-progress", "done", "blocked", "cancelled"]).optional().describe("New status"),
     progress: z.number().min(0).max(1).optional().describe("Progress 0.0-1.0"),
+    change_reason: z.string().optional().describe("Why this change was made (recorded in audit log)"),
+    change_evidence: z.array(z.string()).optional().describe("Supporting evidence/references for the change"),
   },
   async ({ plan_id, ...fields }) => {
     const body = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
@@ -199,7 +201,7 @@ server.tool(
     title: z.string().describe("Task title"),
     start_date: z.string().describe("Start date YYYY-MM-DD"),
     end_date: z.string().describe("End date YYYY-MM-DD"),
-    status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().default("planned"),
+    status: z.enum(["planned", "in-progress", "done", "blocked", "cancelled"]).optional().default("planned"),
     position: z.number().int().min(0).optional().describe("Position index (0-based). Omit to append at end"),
   },
   async (args) => {
@@ -220,7 +222,7 @@ server.tool(
     title: z.string().describe("Subtask title"),
     start_date: z.string().describe("Start date YYYY-MM-DD"),
     end_date: z.string().describe("End date YYYY-MM-DD"),
-    status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().default("planned"),
+    status: z.enum(["planned", "in-progress", "done", "blocked", "cancelled"]).optional().default("planned"),
     path: z.array(z.number()).optional().default([]).describe("Path to nested parent (e.g. [0, 2])"),
     position: z.number().int().min(0).optional().describe("Position index (0-based). Omit to append at end"),
   },
@@ -240,8 +242,10 @@ server.tool(
     task_id: z.string().describe("Task ID"),
     title: z.string().optional().describe("New title"),
     description: z.string().optional().describe("New description"),
-    status: z.enum(["planned", "in-progress", "done", "blocked"]).optional().describe("New status"),
+    status: z.enum(["planned", "in-progress", "done", "blocked", "cancelled"]).optional().describe("New status"),
     progress: z.number().min(0).max(1).optional().describe("Progress 0.0-1.0"),
+    change_reason: z.string().optional().describe("Why this change was made (recorded in audit log)"),
+    change_evidence: z.array(z.string()).optional().describe("Supporting evidence/references for the change"),
   },
   async ({ task_id, ...fields }) => {
     const body = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
