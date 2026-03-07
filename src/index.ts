@@ -893,6 +893,69 @@ server.tool(
   },
 );
 
+// =============================================
+// ARGUS Semantic Search Tools
+// =============================================
+
+server.tool(
+  "search_claims",
+  "Semantic search across 24K+ scientific claims in ARGUS knowledge base. " +
+  "Uses BGE-M3 dense vectors + Qdrant cosine similarity. " +
+  "Returns claims with relevance scores, paper context, and metadata. " +
+  "Use this to find what ARGUS knows about a specific technique, method, or finding.",
+  {
+    query: z.string().describe("Natural language search query (e.g. 'LoRA training efficiency', 'mixture of experts routing')"),
+    k: z.number().min(1).max(100).optional().default(20).describe("Max results to return (default 20)"),
+    min_score: z.number().min(0).max(1).optional().default(0.3).describe("Minimum cosine similarity threshold (default 0.3)"),
+    kind: z.string().optional().describe("Filter by claim_kind (e.g. 'efficiency', 'performance', 'scalability', 'architecture')"),
+    tier: z.number().min(1).max(4).optional().describe("Filter by paper tier (1=highest relevance, 4=lowest)"),
+  },
+  async ({ query, k, min_score, kind, tier }) => {
+    const params = new URLSearchParams({ q: query, k: String(k), min_score: String(min_score) });
+    if (kind) params.set("kind", kind);
+    if (tier) params.set("tier", String(tier));
+    const data = await client.get(`/api/argus/claims/semantic-search?${params}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "search_papers",
+  "Semantic search across 3.9K+ scientific papers in ARGUS knowledge base. " +
+  "Searches by paper title + technical summary using BGE-M3 embeddings. " +
+  "Returns papers with relevance scores, domain, tier, and ARGUS score.",
+  {
+    query: z.string().describe("Natural language search query (e.g. 'curriculum learning for LLM', 'knowledge distillation')"),
+    k: z.number().min(1).max(50).optional().default(10).describe("Max results to return (default 10)"),
+    min_score: z.number().min(0).max(1).optional().default(0.3).describe("Minimum cosine similarity threshold (default 0.3)"),
+    domain: z.string().optional().describe("Filter by domain (e.g. 'ai_infrastructure', 'ai_reasoning', 'agentic_systems')"),
+  },
+  async ({ query, k, min_score, domain }) => {
+    const params = new URLSearchParams({ q: query, k: String(k), min_score: String(min_score) });
+    if (domain) params.set("domain", domain);
+    const data = await client.get(`/api/argus/papers/semantic-search?${params}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "get_paper_details",
+  "Get full details for a specific paper by arXiv ID: summaries (4 languages), " +
+  "all impact claims with metrics, and metadata. " +
+  "Use after search_claims/search_papers to dive deeper into a specific paper.",
+  {
+    arxiv_id: z.string().describe("arXiv paper ID (e.g. '2507.01035', '2406.10785')"),
+  },
+  async ({ arxiv_id }) => {
+    const [summaries, claims] = await Promise.all([
+      client.get(`/api/argus/summaries/${arxiv_id}`).catch(() => ({ error: "summaries not found" })),
+      client.get(`/api/argus/claims/${arxiv_id}`).catch(() => ({ error: "claims not found" })),
+    ]);
+    const result = { arxiv_id, summaries, claims };
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
