@@ -956,6 +956,164 @@ server.tool(
   },
 );
 
+// --- Research Memory (Growth Kernel structured logging) ---
+
+server.tool(
+  "research_start_session",
+  "Start a new research session to track an investigation. " +
+    "Creates a structured log entry with hypothesis, type, and tags. " +
+    "Use before beginning any research to prevent duplicate efforts.",
+  {
+    session_type: z
+      .enum(["exploration", "verification", "survey", "deep_dive"])
+      .optional()
+      .default("exploration"),
+    hypothesis: z
+      .string()
+      .optional()
+      .describe("What we're investigating"),
+    query_summary: z
+      .string()
+      .optional()
+      .describe("Brief description of the research goal"),
+    tags: z
+      .array(z.string())
+      .optional()
+      .default([])
+      .describe("Topic tags for retrieval (e.g. ['lora', 'efficiency'])"),
+  },
+  async ({ session_type, hypothesis, query_summary, tags }) => {
+    const data = await client.post("/api/argus/research/sessions", {
+      session_type,
+      hypothesis,
+      query_summary,
+      tags,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "research_log_query",
+  "Log a search query within a research session. " +
+    "Records what was searched, how, and result quality.",
+  {
+    session_id: z.string().describe("UUID of the research session"),
+    query_text: z.string().describe("The actual search query used"),
+    search_type: z
+      .enum(["semantic", "fts", "sql", "manual"])
+      .optional()
+      .default("semantic"),
+    result_count: z.number().optional().default(0),
+    best_score: z.number().optional().describe("Top result score (0-1)"),
+  },
+  async ({ session_id, query_text, search_type, result_count, best_score }) => {
+    const data = await client.post("/api/argus/research/queries", {
+      session_id,
+      query_text,
+      search_type,
+      result_count,
+      best_score,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "research_log_hit",
+  "Log a relevant result found during research. " +
+    "Links a claim/paper/technique to the session for evidence tracking.",
+  {
+    session_id: z.string().describe("UUID of the research session"),
+    query_id: z.string().optional().describe("UUID of the query that found this"),
+    entity_type: z
+      .enum(["claim", "paper", "technique"])
+      .describe("Type of entity found"),
+    entity_id: z.string().describe("UUID or arxiv_id of the entity"),
+    relevance_score: z.number().optional(),
+    notes: z.string().optional().describe("Why this result is relevant"),
+    used_in_output: z.boolean().optional().default(false),
+  },
+  async ({
+    session_id,
+    query_id,
+    entity_type,
+    entity_id,
+    relevance_score,
+    notes,
+    used_in_output,
+  }) => {
+    const data = await client.post("/api/argus/research/hits", {
+      session_id,
+      query_id,
+      entity_type,
+      entity_id,
+      relevance_score,
+      notes,
+      used_in_output,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "research_end_session",
+  "Complete a research session with outcome and conclusions. " +
+    "Records what was found, confidence level, and status.",
+  {
+    session_id: z.string().describe("UUID of the research session"),
+    status: z
+      .enum(["completed", "abandoned"])
+      .optional()
+      .default("completed"),
+    outcome: z.string().optional().describe("What we concluded"),
+    outcome_confidence: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("Confidence in the outcome (0.0-1.0)"),
+  },
+  async ({ session_id, status, outcome, outcome_confidence }) => {
+    const data = await client.patch(
+      `/api/argus/research/sessions/${session_id}`,
+      { status, outcome, outcome_confidence },
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "research_check_history",
+  "Check if we've already researched a topic. " +
+    "Searches across all prior sessions, queries, and outcomes using full-text search. " +
+    "ALWAYS call this before starting new research to avoid duplicates.",
+  {
+    query: z
+      .string()
+      .describe(
+        "Topic to check (e.g. 'LoRA training efficiency', 'MoE expert routing')",
+      ),
+    limit: z.number().min(1).max(50).optional().default(10),
+  },
+  async ({ query, limit }) => {
+    const data = await client.get(
+      `/api/argus/research/history?q=${encodeURIComponent(query)}&limit=${limit}`,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
