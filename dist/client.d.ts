@@ -17,6 +17,12 @@ export declare class ReenClient {
     put<T = unknown>(path: string, body?: unknown): Promise<T>;
     patch<T = unknown>(path: string, body?: unknown): Promise<T>;
     delete<T = unknown>(path: string, body?: unknown): Promise<T>;
+    /** Upload a file via multipart/form-data */
+    upload<T = unknown>(path: string, file: {
+        name: string;
+        content: Buffer;
+        mimeType?: string;
+    }, fields?: Record<string, string>): Promise<T>;
 }
 /** Log to stderr (stdout is reserved for JSON-RPC) */
 export declare function log(msg: string): void;

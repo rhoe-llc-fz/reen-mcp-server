@@ -320,6 +320,17 @@ server.tool("share_exhelp", "Generate a public share link for an Ex-Help request
     const data = await client.post(`/api/gant/exhelp/${exhelp_id}/share`);
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 });
+server.tool("upload_exhelp_file", "Upload a file to an Ex-Help request. The file content is passed as base64-encoded string. Supported: md, txt, json, yaml, csv, py, js, ts, patch, diff, sh, sql, toml.", {
+    plan_id: z.string().describe("Plan ID that owns the Ex-Help request"),
+    exhelp_id: z.string().describe("Ex-Help request ID"),
+    filename: z.string().describe("Original filename (e.g. 'experiment_queries.json')"),
+    content_base64: z.string().describe("File content encoded as base64"),
+    mime_type: z.string().optional().default("text/plain").describe("MIME type (default: text/plain)"),
+}, async ({ plan_id, exhelp_id, filename, content_base64, mime_type }) => {
+    const content = Buffer.from(content_base64, "base64");
+    const data = await client.upload(`/api/gant/plans/${plan_id}/files`, { name: filename, content, mimeType: mime_type }, { context: "exhelp", exhelp_id });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+});
 server.tool("list_plan_files", "List files attached to a plan (filterable by context: narrative or exhelp)", {
     plan_id: z.string().describe("Plan ID"),
     context: z.enum(["narrative", "exhelp"]).optional().describe("Filter by context type"),

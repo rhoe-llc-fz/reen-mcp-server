@@ -71,6 +71,60 @@ export class ReenClient {
     delete(path, body) {
         return this.request("DELETE", path, body);
     }
+    /** Upload a file via multipart/form-data */
+    async upload(path, file, fields) {
+        const url = `${this.baseUrl}${path}`;
+        const boundary = `----ReenMCP${Date.now()}${Math.random().toString(36).slice(2)}`;
+        const parts = [];
+        // Add form fields
+        if (fields) {
+            for (const [key, value] of Object.entries(fields)) {
+                parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
+            }
+        }
+        // Add file part
+        const mime = file.mimeType || "application/octet-stream";
+        parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${mime}\r\n\r\n`));
+        parts.push(file.content);
+        parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+        const body = Buffer.concat(parts);
+        let lastError = null;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+                await sleep(delay);
+                log(`Retry ${attempt}/${MAX_RETRIES} for POST ${path} (upload)`);
+            }
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${this.token}`,
+                        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                        "User-Agent": "reen-mcp-server/0.1.0",
+                    },
+                    body,
+                });
+                if (res.status === 429 || res.status >= 500) {
+                    lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    if (attempt < MAX_RETRIES)
+                        continue;
+                }
+                if (!res.ok) {
+                    const text = await res.text().catch(() => "");
+                    throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+                }
+                return (await res.json());
+            }
+            catch (err) {
+                lastError = err instanceof Error ? err : new Error(String(err));
+                if (attempt < MAX_RETRIES && isRetryable(lastError))
+                    continue;
+                throw lastError;
+            }
+        }
+        throw lastError || new Error("Upload failed");
+    }
 }
 function isRetryable(err) {
     const msg = err.message.toLowerCase();
