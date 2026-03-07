@@ -1114,6 +1114,72 @@ server.tool(
   },
 );
 
+// --- Runner (Growth Kernel hypothesis verification) ---
+
+server.tool(
+  "runner_submit_experiment",
+  "Submit a quick training experiment (50-100 steps) on Farm2 to verify/falsify a hypothesis. " +
+    "Uses Axolotl QLoRA on 2×RTX 5090. Returns experiment_id for tracking.",
+  {
+    hypothesis: z.string().describe("What we're testing (e.g. 'LoRA rank 16 converges faster than rank 64')"),
+    max_steps: z.number().min(10).max(500).optional().default(100),
+    config_overrides: z
+      .record(z.unknown())
+      .optional()
+      .default({})
+      .describe("Axolotl config overrides (e.g. {lora_r: 64, learning_rate: 1e-4})"),
+    session_id: z.string().optional().describe("Link to research session UUID"),
+  },
+  async ({ hypothesis, max_steps, config_overrides, session_id }) => {
+    const data = await client.post("/api/argus/runner/experiments", {
+      hypothesis,
+      max_steps,
+      config_overrides,
+      session_id,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "runner_get_status",
+  "Check the status of a runner experiment. Returns status, metrics, and verdict if available.",
+  {
+    experiment_id: z.string().describe("UUID of the experiment"),
+  },
+  async ({ experiment_id }) => {
+    const data = await client.get(
+      `/api/argus/runner/experiments/${experiment_id}`,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
+server.tool(
+  "runner_list_experiments",
+  "List recent runner experiments with optional filtering by status or verdict.",
+  {
+    status: z.enum(["pending", "running", "completed", "failed"]).optional(),
+    verdict: z.enum(["verified", "falsified", "inconclusive"]).optional(),
+    limit: z.number().min(1).max(100).optional().default(20),
+  },
+  async ({ status, verdict, limit }) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (status) params.set("status", status);
+    if (verdict) params.set("verdict", verdict);
+    const data = await client.get(
+      `/api/argus/runner/experiments?${params}`,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    };
+  },
+);
+
 // --- Types ---
 
 interface Plan {
